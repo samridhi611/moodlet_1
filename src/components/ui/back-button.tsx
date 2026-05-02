@@ -1,7 +1,8 @@
+import { useMemo } from 'react';
+
 import { usePalette } from '@/context/PaletteContext';
 import { createPaletteColors, fontFamily } from '@/theme/design';
 import { ArrowLeft } from 'lucide-react-native';
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 type Props = {
@@ -10,17 +11,13 @@ type Props = {
 };
 
 export function BackButton({ onPress, label = 'Back' }: Props) {
-    const { tokens } = usePalette();
-    const colors = useMemo(() => createPaletteColors(tokens), [tokens]);
-    const styles = useMemo(() => createStyles(colors), [colors]);
-
+    const { tokens, colors, styles: s } = usePalette();
+    const styles = useMemo(() => createScreenStyles(colors), [colors]);
     return (
         <Pressable
             onPress={onPress}
-            style={({ pressed, hovered }) => [
+            style={() => [
                 styles.button,
-                hovered && styles.hovered,
-                pressed && styles.pressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel={label}
@@ -33,19 +30,13 @@ export function BackButton({ onPress, label = 'Back' }: Props) {
     );
 }
 
-const createStyles = (colors: ReturnType<typeof createPaletteColors>) =>
+const createScreenStyles = (colors: ReturnType<typeof createPaletteColors>) =>
     StyleSheet.create({
         button: {
             borderBottomColor: 'transparent',
             borderBottomWidth: 1,
             paddingVertical: 8,
             alignSelf: 'flex-start',
-        },
-        hovered: {
-            borderBottomColor: colors.inputHover,
-        },
-        pressed: {
-            borderBottomColor: colors.ink,
         },
         content: {
             alignItems: 'center',

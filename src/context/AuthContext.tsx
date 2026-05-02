@@ -1,11 +1,12 @@
+import { getProfile } from '@/api/profile';
+import { isSupabaseConfigured, supabase } from '@/services/supabase';
+import { Profile } from '@/types/profile';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-
-import { isSupabaseConfigured, supabase } from '@/services/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -21,7 +22,6 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   username: string | null;
-  continueAsGuest: (username: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 };
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<AuthMode>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -80,24 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const continueAsGuest = useCallback(async (rawUsername: string) => {
-    const nextUsername = cleanUsername(rawUsername);
-
-    if (!nextUsername) {
-      throw new Error('Username is required.');
-    }
-
-    await supabase.auth.signOut();
-    await Promise.all([
-      AsyncStorage.setItem(USERNAME_STORAGE_KEY, nextUsername),
-      AsyncStorage.setItem(GUEST_SESSION_KEY, 'true'),
-    ]);
-
-    setSession(null);
-    setMode('guest');
-    setUsername(nextUsername);
-    router.replace('/(tabs)');
-  }, []);
 
   const signInWithGoogle = useCallback(async () => {
     if (!isSupabaseConfigured) {
@@ -114,42 +97,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!data.url) throw new Error('Google login did not return an auth URL.');
 
     const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
     if (result.type !== 'success') throw new Error('Google login was cancelled.');
 
-    const parsedUrl = new URL(result.url);
-    const code = parsedUrl.searchParams.get('code');
+    const url = result.url;
+    const hasFragment = url.includes('#access_token=');
+    const hasCode = url.includes('?code=') || url.includes('&code=');
 
-    if (!code) throw new Error('Google login did not return an auth code.');
-
-    const { data: sessionData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (exchangeError) throw exchangeError;
-
-    const user = sessionData.session?.user;
-
-    // Returning user: profile already has a username — nothing to do.
-    // First-time user: derive a username from their Google display name.
-    const existingUsername = user?.user_metadata?.username as string | undefined;
-
-    if (!existingUsername) {
-      const googleName = (user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? '') as string;
-      const derivedUsername = cleanUsername(googleName) || 'friend';
-
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { username: derivedUsername },
-      });
-
-      if (updateError) throw updateError;
-
-      await AsyncStorage.setItem(USERNAME_STORAGE_KEY, derivedUsername);
-      setUsername(derivedUsername);
+    if (hasFragment) {
+      const params = new URLSearchParams(url.split('#')[1]);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (!access_token || !refresh_token) throw new Error('Missing tokens in redirect.');
+      const { error: setError } = await supabase.auth.setSession({ access_token, refresh_token });
+      if (setError) throw setError;
+    } else if (hasCode) {
+      const code = new URL(url).searchParams.get('code');
+      if (!code) throw new Error('Google login did not return an auth code.');
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+    } else {
+      throw new Error('Unrecognised redirect format.');
     }
 
-    await AsyncStorage.setItem(GUEST_SESSION_KEY, 'false');
-    setSession(sessionData.session);
+    // ↓ only this part changed — no more user_metadata username logic
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('No user after login.');
+
+    const p = await getProfile(user.id);
+    setProfile(p);
     setMode('supabase');
-    router.replace('/(tabs)');
+    await AsyncStorage.setItem(GUEST_SESSION_KEY, 'false');
+
+    // first time → no username → username-setup
+    // returning user → has username → (tabs)
+    if (!p?.username) {
+      router.replace('/username-setup');
+    } else {
+      router.replace('/(tabs)');
+    }
   }, []);
 
   const signOut = useCallback(async () => {
@@ -172,11 +157,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       user: session?.user ?? null,
       username,
-      continueAsGuest,
       signInWithGoogle,
-      signOut,
+      signOut
     }),
-    [continueAsGuest, isReady, mode, session, signInWithGoogle, signOut, username],
+    [isReady, mode, session, signInWithGoogle, signOut, username],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

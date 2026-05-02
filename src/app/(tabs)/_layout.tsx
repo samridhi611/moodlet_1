@@ -1,10 +1,10 @@
-import { Redirect, Tabs } from 'expo-router';
-import React from 'react';
+import { Redirect, Tabs } from "expo-router";
+import React from "react";
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useAuth } from '@/context/AuthContext';
-import { usePalette } from '@/context/PaletteContext';
+import { useAuth } from "@/context/AuthContext";
+import { usePalette } from "@/context/PaletteContext";
+
+import BottomBar from "@/components/ui/layout-components/bottombar"; // 👈 your custom component
 
 export default function TabLayout() {
   const { isSignedIn } = useAuth();
@@ -17,27 +17,20 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: tokens.tabActive,
-        tabBarInactiveTintColor: tokens.text,
-        tabBarStyle: {
-          backgroundColor: tokens.bg,
-          borderTopColor: tokens.ring,
-        },
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+      }}
+      tabBar={(props) => <BottomBar {...props} />} // 👈 KEY CHANGE
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: "Home",
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: "Explore",
         }}
       />
     </Tabs>
