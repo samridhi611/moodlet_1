@@ -33,6 +33,7 @@ export function FriendsMoodWidget() {
     }, []);
 
     const active = friends.find((f) => f.id === activeId);
+    const activeMood = active ? MOOD_MAP[active.mood] : null;
     const goodCount = friends.filter((f) => MOOD_MAP[f.mood].score >= 5).length;
 
     const handleReact = async (friendId: string) => {
@@ -53,6 +54,7 @@ export function FriendsMoodWidget() {
             kicker="Your circle"
             title="Friends’ moods"
             right={<Chip label={`${goodCount}/${friends.length} vibing`} colors={colors} />}
+            tint={activeMood ? [activeMood.tintBg, activeMood.tintAccent] : [colors.primarySoft, colors.accent]}
         >
             <ScrollView
                 horizontal

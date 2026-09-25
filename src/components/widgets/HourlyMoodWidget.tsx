@@ -5,9 +5,10 @@ import { applyHour, dateKey, HourMap, loadHours, saveHours } from '@/widgets/hou
 import { syncHoursWidget } from '@/widgets/sync';
 import { hourWidgetProps } from '@/widgets/widget-data';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Chip, PressableScale, Widget } from './WidgetCard';
+import { Chip, MoodOrb, PressableScale, Widget } from './WidgetCard';
 
 const COL_W = 34;
 const COL_GAP = 8;
@@ -61,6 +62,7 @@ export function HourlyMoodWidget() {
             kicker="Today, hour by hour"
             title="Mood timeline"
             right={avgMood ? <Chip label={`avg ${avgMood.label}`} color={avgMood.tintAccent} colors={colors} /> : undefined}
+            tint={avgMood ? [avgMood.tintBg, avgMood.tintAccent] : [colors.primarySoft, colors.accent]}
         >
             <ScrollView
                 ref={scrollRef}
@@ -89,16 +91,16 @@ export function HourlyMoodWidget() {
                             <View style={[styles.col, future && { opacity: 0.25 }]}>
                                 <View style={[styles.track, isEditing && styles.trackActive]}>
                                     {mood && MoodIcon ? (
-                                        <View
-                                            style={[
-                                                styles.bar,
-                                                { height: 26 + (mood.score / 8) * (BAR_MAX - 26), backgroundColor: mood.tintBg },
-                                            ]}
+                                        <LinearGradient
+                                            colors={[mood.tintAccent, mood.tintBg]}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 0, y: 1 }}
+                                            style={[styles.bar, { height: 26 + (mood.score / 8) * (BAR_MAX - 26) }]}
                                         >
                                             <View style={styles.barBadge}>
                                                 <MoodIcon size={12} color={mood.tintAccent} strokeWidth={2.4} />
                                             </View>
-                                        </View>
+                                        </LinearGradient>
                                     ) : (
                                         !future && <Text style={styles.plus}>+</Text>
                                     )}
@@ -129,14 +131,13 @@ export function HourlyMoodWidget() {
                                         setEditing(null);
                                     }}
                                 >
-                                    <View
-                                        style={[
-                                            styles.pick,
-                                            active && { backgroundColor: m.tintBg, borderColor: m.tintAccent, borderWidth: 1.5 },
-                                        ]}
-                                    >
-                                        <Icon size={20} color={active ? m.tintAccent : colors.muted} strokeWidth={2} />
-                                    </View>
+                                    {active ? (
+                                        <MoodOrb mood={m} colors={colors} size={44} iconSize={20} />
+                                    ) : (
+                                        <View style={styles.pick}>
+                                            <Icon size={20} color={colors.muted} strokeWidth={2} />
+                                        </View>
+                                    )}
                                 </PressableScale>
                             );
                         })}

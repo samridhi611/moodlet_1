@@ -58,6 +58,10 @@ export default function HomeScreen() {
             <StreakWidget />
             <TodayWidget />
           </View>
+          {/* <View style={styles.widgetsRow}>
+            <TopMoodWidget />
+            <DaysLoggedWidget />
+          </View> */}
           <WeekWidget />
           <FriendsMoodWidget />
           <HourlyMoodWidget />

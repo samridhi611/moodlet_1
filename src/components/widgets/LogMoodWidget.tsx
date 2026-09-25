@@ -5,7 +5,7 @@ import { MOOD_MAP, MOODS, MoodId } from '@/theme/moods';
 import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
-import { PressableScale, Widget } from './WidgetCard';
+import { MoodOrb, PressableScale, Widget } from './WidgetCard';
 
 // Ported from moodlet/src/components/widgets/LogMoodWidget.tsx. Unlike
 // moodlet's local-only `logMood()`, submit here calls the real
@@ -53,7 +53,7 @@ export function LogMoodWidget() {
             styles={sharedStyles}
             kicker="Check in"
             title={mood ? `Feeling ${mood.label.toLowerCase()}` : "How's the vibe?"}
-            tint={mood ? [mood.tintBg, mood.tintAccent] : undefined}
+            tint={mood ? [mood.tintBg, mood.tintAccent] : [colors.primarySoft, colors.accent]}
         >
             <View style={styles.row}>
                 {MOODS.map((m) => {
@@ -68,21 +68,23 @@ export function LogMoodWidget() {
                             accessibilityLabel={m.label}
                         >
                             <View style={styles.orbWrap}>
-                                <View
-                                    style={[
-                                        styles.orb,
-                                        active
-                                            ? { backgroundColor: m.tintBg, borderColor: m.tintAccent, borderWidth: 2 }
-                                            : {
-                                                  backgroundColor: colors.surfaceWarm,
-                                                  borderColor: colors.border,
-                                                  borderWidth: 1,
-                                                  opacity: selected ? 0.5 : 1,
-                                              },
-                                    ]}
-                                >
-                                    <Icon size={22} color={active ? m.tintAccent : colors.muted} strokeWidth={2} />
-                                </View>
+                                {active ? (
+                                    <MoodOrb mood={m} colors={colors} size={52} iconSize={22} />
+                                ) : (
+                                    <View
+                                        style={[
+                                            styles.orb,
+                                            {
+                                                backgroundColor: colors.surfaceWarm,
+                                                borderColor: colors.border,
+                                                borderWidth: 1,
+                                                opacity: selected ? 0.5 : 1,
+                                            },
+                                        ]}
+                                    >
+                                        <Icon size={22} color={colors.muted} strokeWidth={2} />
+                                    </View>
+                                )}
                                 <Text style={[styles.orbLabel, active && { color: m.tintAccent }]}>{m.label}</Text>
                             </View>
                         </PressableScale>

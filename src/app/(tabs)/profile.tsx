@@ -213,8 +213,8 @@ export default function ProfileScreen() {
           onPress={signOut}
           style={({ pressed }) => [styles.signOutButton, pressed && styles.lightPress]}
         >
-          <View style={[styles.sectionIcon, styles.signOutIcon]}>
-            <LogOut size={15} color="#B42318" strokeWidth={2.2} />
+          <View style={[styles.sectionIcon, { backgroundColor: colors.errorSoft }]}>
+            <LogOut size={15} color={colors.error} strokeWidth={2.2} />
           </View>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
@@ -302,9 +302,6 @@ const createStyles = (colors: PaletteColors) =>
       justifyContent: 'center',
       minHeight: 58,
       paddingHorizontal: 18,
-    },
-    signOutIcon: {
-      backgroundColor: 'rgba(180,35,24,0.1)',
     },
     lightPress: {
       opacity: 0.72,

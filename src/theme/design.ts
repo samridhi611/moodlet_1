@@ -62,6 +62,7 @@ export const createPaletteColors = (tokens: PaletteTokens) => ({
   inputHover: mix(tokens.ring, tokens.text, 0.18),
   buttonText: tokens.btnText,
   error: '#B42318',
+  errorSoft: mix('#B42318', tokens.bg, 0.9),
   white: '#FFFFFF',
 });
 

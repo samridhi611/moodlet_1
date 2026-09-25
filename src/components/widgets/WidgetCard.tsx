@@ -1,7 +1,7 @@
 import { fontFamily, PaletteColors } from '@/theme/design';
 import { SharedStyles } from '@/theme/styles';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ReactNode, useMemo, useState } from 'react';
+import { ComponentType, ReactNode, useMemo, useState } from 'react';
 import {
     Animated,
     Pressable,
@@ -87,6 +87,60 @@ export function Chip({ label, color, colors }: { label: string; color?: string; 
             <View style={[chipStyles.dot, { backgroundColor: c }]} />
             <Text style={[chipStyles.text, { color: c }]}>{label}</Text>
         </View>
+    );
+}
+
+type MoodLike = {
+    tintBg: string;
+    tintAccent: string;
+    Icon: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+};
+
+/** A mood's icon on a two-stop gradient ring — the app's "this is the logged
+ *  answer" motif (vs. a plain muted circle for an unselected option). The icon
+ *  always sits on a solid `colors.surface` disc inside the ring, never directly
+ *  on the gradient, so contrast holds regardless of how pale a palette's tints are. */
+export function MoodOrb({
+    mood,
+    colors,
+    size = 52,
+    iconSize,
+}: {
+    mood: MoodLike;
+    colors: PaletteColors;
+    size?: number;
+    iconSize?: number;
+}) {
+    const Icon = mood.Icon;
+    const ringWidth = Math.max(3, Math.round(size * 0.07));
+
+    return (
+        <LinearGradient
+            colors={[mood.tintBg, mood.tintAccent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                padding: ringWidth,
+                alignItems: 'center',
+                justifyContent: 'center',
+            }}
+        >
+            <View
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: size / 2,
+                    backgroundColor: colors.surface,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                <Icon size={iconSize ?? Math.round(size * 0.42)} color={mood.tintAccent} strokeWidth={2.2} />
+            </View>
+        </LinearGradient>
     );
 }
 

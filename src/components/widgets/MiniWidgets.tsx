@@ -5,14 +5,15 @@ import { MOOD_MAP, MOODS, MoodId } from '@/theme/moods';
 import { toDateString } from '@/utils/date';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Widget } from './WidgetCard';
+import { MoodOrb, Widget } from './WidgetCard';
 
 // Ported from moodlet/src/components/widgets/MiniWidgets.tsx, but improved
 // per the plan: StreakWidget/TodayWidget read real data straight from
 // useEntries() (`streak`/`todayEntry`) instead of recomputing locally from a
 // separate local store, and WeekWidget's mood-wave computes directly from
 // `entries` (already one-per-day-ish granularity) using the new `score`
-// field on moods.ts.
+// field on moods.ts. TopMoodWidget/DaysLoggedWidget are new square tiles
+// (not in moodlet) added to round the dashboard into a full 2x2 grid.
 
 export function StreakWidget() {
     const { colors, styles: sharedStyles } = usePalette();
@@ -51,9 +52,7 @@ export function TodayWidget() {
             <Text style={sharedStyles.type.kicker}>Today</Text>
             {mood && MoodIcon ? (
                 <View style={styles.todayRow}>
-                    <View style={[styles.todayIcon, { backgroundColor: mood.tintBg }]}>
-                        <MoodIcon size={26} color={mood.tintAccent} strokeWidth={2.2} />
-                    </View>
+                    <MoodOrb mood={mood} colors={colors} size={52} iconSize={26} />
                     <Text style={[styles.todayLabel, { color: mood.tintAccent }]}>{mood.label}</Text>
                 </View>
             ) : (
@@ -90,21 +89,19 @@ export function WeekWidget() {
     });
 
     return (
-        <Widget colors={colors} styles={sharedStyles} kicker="This week" title="Your mood wave">
+        <Widget
+            colors={colors}
+            styles={sharedStyles}
+            kicker="This week"
+            title="Your mood wave"
+            tint={[colors.primarySoft, colors.accent]}
+        >
             <View style={styles.week}>
                 {days.map((day, i) => {
-                    const DayIcon = day.mood?.Icon;
                     return (
                         <View key={i} style={styles.dayCol}>
-                            {day.mood && DayIcon ? (
-                                <View
-                                    style={[
-                                        styles.dayDot,
-                                        { backgroundColor: day.mood.tintBg, borderColor: day.mood.tintAccent, borderWidth: 1.5 },
-                                    ]}
-                                >
-                                    <DayIcon size={18} color={day.mood.tintAccent} strokeWidth={2.2} />
-                                </View>
+                            {day.mood ? (
+                                <MoodOrb mood={day.mood} colors={colors} size={38} iconSize={18} />
                             ) : (
                                 <View style={[styles.dayDot, styles.dayEmpty]} />
                             )}
@@ -123,6 +120,75 @@ export function WeekWidget() {
 function moodForScore(score: number) {
     const rounded = Math.min(8, Math.max(1, Math.round(score)));
     return MOODS.find((m) => m.score === rounded) ?? MOODS[0];
+}
+
+/** Most-logged mood over the last 7 days. */
+export function TopMoodWidget() {
+    const { colors, styles: sharedStyles } = usePalette();
+    const { entries } = useEntries();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
+    const top = useMemo(() => {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 6);
+        const cutoffStr = toDateString(cutoff);
+
+        const counts = new Map<MoodId, number>();
+        for (const e of entries) {
+            if (e.entry_date < cutoffStr) continue;
+            counts.set(e.mood, (counts.get(e.mood) ?? 0) + 1);
+        }
+
+        let bestId: MoodId | null = null;
+        let bestCount = 0;
+        for (const [id, count] of counts) {
+            if (count > bestCount) {
+                bestId = id;
+                bestCount = count;
+            }
+        }
+        return bestId ? { mood: MOOD_MAP[bestId], count: bestCount } : null;
+    }, [entries]);
+
+    return (
+        <Widget
+            colors={colors}
+            styles={sharedStyles}
+            style={styles.half}
+            tint={top ? [top.mood.tintBg, top.mood.tintAccent] : [colors.primarySoft, colors.accent]}
+        >
+            <Text style={sharedStyles.type.kicker}>This week</Text>
+            {top ? (
+                <View style={styles.todayRow}>
+                    <MoodOrb mood={top.mood} colors={colors} size={52} iconSize={26} />
+                    <Text style={[styles.todayLabel, { color: top.mood.tintAccent }]}>{top.mood.label}</Text>
+                </View>
+            ) : (
+                <View style={styles.todayRow}>
+                    <Text style={styles.notLogged}>—</Text>
+                    <Text style={sharedStyles.type.caption}>No check-ins yet</Text>
+                </View>
+            )}
+        </Widget>
+    );
+}
+
+/** Total entries ever logged — the "all time" counterpart to the day-streak tile. */
+export function DaysLoggedWidget() {
+    const { colors, styles: sharedStyles } = usePalette();
+    const { entries } = useEntries();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
+    return (
+        <Widget colors={colors} styles={sharedStyles} style={styles.half} tint={[colors.primarySoft, colors.accent]}>
+            <Text style={sharedStyles.type.kicker}>All time</Text>
+            <View style={styles.bigRow}>
+                <Text style={styles.big}>{entries.length}</Text>
+                <Text style={styles.fire}>📅</Text>
+            </View>
+            <Text style={sharedStyles.type.caption}>{entries.length === 1 ? 'day logged' : 'days logged'}</Text>
+        </Widget>
+    );
 }
 
 const createStyles = (colors: PaletteColors) =>
