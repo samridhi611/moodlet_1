@@ -1,8 +1,8 @@
 import { BackButton } from '@/components/ui/back-button';
 import { UsernameInput } from '@/components/ui/inputs/user-name-input';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { useAuth } from '@/context/AuthContext';
 import { usePalette } from '@/context/PaletteContext';
+import { useProfile } from '@/context/ProfileContext';
 import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
@@ -15,12 +15,14 @@ import {
 } from 'react-native';
 
 export default function UsernameSetupScreen() {
-  const { saveUsername, user } = useAuth();
+  const { saveUsername, profile } = useProfile()
   const { colors, styles: s } = usePalette();
 
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  console.log(profile)
 
   const cleanedUsername = useMemo(() => username.trim().replace(/\s+/g, ' '), [username]);
   const canSubmit = cleanedUsername.length > 0 && !isSubmitting;
@@ -54,7 +56,7 @@ export default function UsernameSetupScreen() {
             <View style={styles.header}>
               <Text style={s.type.kicker}>one last thing</Text>
               <Text style={s.type.screenTitle}>
-                Hey {user?.user_metadata?.full_name}, pick a username
+                {/* Hey {profile?.user_metadata?.full_name}, pick a username */}
               </Text>
               <Text style={s.type.subtitle}>
                 This is how others will see you on Moodlet.

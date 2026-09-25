@@ -1,62 +1,91 @@
-import { useMemo } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-
-import { useAuth } from '@/context/AuthContext';
+import { EntryCard } from '@/components/entry/entry-card';
+import { useCheckInSheet } from '@/context/CheckInSheetContext';
+import { useEntries } from '@/context/EntriesContext';
 import { usePalette } from '@/context/PaletteContext';
-import { createPaletteColors, fontFamily, PaletteColors } from '@/theme/design';
-
-const moodOptions = ['Calm', 'Heavy', 'Hopeful', 'Tired'];
+import { useProfile } from '@/context/ProfileContext';
+import { fontFamily, PaletteColors } from '@/theme/design';
+import { Flame } from 'lucide-react-native';
+import { useMemo } from 'react';
+import {
+  Pressable,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 export default function HomeScreen() {
-  const { mode, signOut, username } = useAuth();
-  const { tokens } = usePalette();
-  const colors = useMemo(() => createPaletteColors(tokens), [tokens]);
+  const { username } = useProfile();
+  const { colors } = usePalette();
+  const { entries, todayEntry, streak, isLoading, refresh } = useEntries();
+  const { open: openCheckIn } = useCheckInSheet();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const recentEntries = todayEntry ? entries.slice(1, 11) : entries.slice(0, 10);
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor={colors.primary} />}
+      >
         <View style={styles.header}>
           <View style={styles.headerCopy}>
             <Text style={styles.overline}>Today&apos;s check-in</Text>
-            <Text style={styles.greeting}>Hi, {username}</Text>
-            <Text style={styles.subtleText}>
-              {mode === 'supabase' ? 'Your journal is connected to Google.' : 'You are journaling as a guest.'}
+            <Text style={styles.greeting}>Hi, {username ?? 'there'}</Text>
+          </View>
+
+          {streak > 0 && (
+            <View
+              style={styles.streakBadge}
+              accessible
+              accessibilityLabel={`${streak} day streak`}
+            >
+              <Flame size={16} color={colors.primaryDark} strokeWidth={2.3} />
+              <Text style={styles.streakText}>{streak}</Text>
+            </View>
+          )}
+        </View>
+
+        {todayEntry ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Today</Text>
+            <EntryCard entry={todayEntry} />
+            <Pressable
+              onPress={openCheckIn}
+              style={({ pressed }) => [styles.secondaryButton, pressed && styles.lightPress]}
+            >
+              <Text style={styles.secondaryButtonText}>Log another moment</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.promptPanel}>
+            <Text style={styles.promptEyebrow}>Mood prompt</Text>
+            <Text style={styles.promptTitle}>How are you arriving right now?</Text>
+            <Text style={styles.promptCopy}>
+              Notice the first honest word that comes up. One tap is all it takes.
             </Text>
+            <Pressable
+              onPress={openCheckIn}
+              style={({ pressed }) => [styles.entryButton, pressed && styles.entryButtonPressed]}
+            >
+              <Text style={styles.entryButtonText}>Begin check-in</Text>
+            </Pressable>
           </View>
+        )}
 
-          <Pressable onPress={signOut} style={({ pressed }) => [styles.signOutButton, pressed && styles.lightPress]}>
-            <Text style={styles.signOutText}>Sign out</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.promptPanel}>
-          <View style={styles.promptAccent} />
-          <Text style={styles.promptEyebrow}>Mood prompt</Text>
-          <Text style={styles.promptTitle}>How are you arriving right now?</Text>
-          <Text style={styles.promptCopy}>
-            Notice the first honest word that comes up. The full journal editor comes next.
-          </Text>
-
-          <View style={styles.moodGrid}>
-            {moodOptions.map((mood) => (
-              <View key={mood} style={styles.moodPill}>
-                <Text style={styles.moodText}>{mood}</Text>
-              </View>
-            ))}
+        {recentEntries.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent check-ins</Text>
+            <View style={styles.entryList}>
+              {recentEntries.map((entry) => (
+                <EntryCard key={entry.id} entry={entry} />
+              ))}
+            </View>
           </View>
-
-          <Pressable style={({ pressed }) => [styles.entryButton, pressed && styles.entryButtonPressed]}>
-            <Text style={styles.entryButtonText}>Begin entry</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.noteCard}>
-          <Text style={styles.noteTitle}>Gentle setup complete</Text>
-          <Text style={styles.noteCopy}>
-            Username and auth are ready. Next we can add daily mood entries, streaks, and saved reflections.
-          </Text>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -72,6 +101,7 @@ const createStyles = (colors: PaletteColors) =>
       gap: 22,
       padding: 22,
       paddingTop: 28,
+      paddingBottom: 140,
     },
     header: {
       alignItems: 'flex-start',
@@ -87,73 +117,47 @@ const createStyles = (colors: PaletteColors) =>
       color: colors.accentText,
       fontFamily: fontFamily.extraBold,
       fontSize: 12,
-      letterSpacing: 0,
       textTransform: 'uppercase',
     },
     greeting: {
       color: colors.ink,
       fontFamily: fontFamily.extraBold,
       fontSize: 32,
-      letterSpacing: 0,
       lineHeight: 38,
     },
-    subtleText: {
-      color: colors.muted,
-      fontFamily: fontFamily.medium,
-      fontSize: 14,
-      lineHeight: 20,
-    },
-    signOutButton: {
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
+    streakBadge: {
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      borderRadius: 999,
+      flexDirection: 'row',
+      gap: 5,
       paddingHorizontal: 12,
-      paddingVertical: 9,
+      paddingVertical: 8,
     },
-    signOutText: {
-      color: colors.ink,
-      fontFamily: fontFamily.bold,
-      fontSize: 13,
-    },
-    lightPress: {
-      opacity: 0.72,
+    streakText: {
+      color: colors.primaryDark,
+      fontFamily: fontFamily.extraBold,
+      fontSize: 14,
     },
     promptPanel: {
       backgroundColor: colors.surface,
       borderColor: colors.border,
-      borderRadius: 8,
+      borderRadius: 16,
       borderWidth: 1,
       gap: 12,
-      overflow: 'hidden',
       padding: 20,
-      shadowColor: colors.ink,
-      shadowOffset: { height: 14, width: 0 },
-      shadowOpacity: 0.09,
-      shadowRadius: 24,
-    },
-    promptAccent: {
-      backgroundColor: colors.blush,
-      height: 7,
-      left: 0,
-      position: 'absolute',
-      right: 0,
-      top: 0,
     },
     promptEyebrow: {
       color: colors.accentText,
       fontFamily: fontFamily.extraBold,
       fontSize: 12,
-      letterSpacing: 0,
-      marginTop: 6,
       textTransform: 'uppercase',
     },
     promptTitle: {
       color: colors.ink,
       fontFamily: fontFamily.extraBold,
-      fontSize: 30,
-      letterSpacing: 0,
-      lineHeight: 36,
+      fontSize: 26,
+      lineHeight: 32,
     },
     promptCopy: {
       color: colors.muted,
@@ -161,29 +165,10 @@ const createStyles = (colors: PaletteColors) =>
       fontSize: 15,
       lineHeight: 23,
     },
-    moodGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-      paddingTop: 4,
-    },
-    moodPill: {
-      backgroundColor: colors.primarySoft,
-      borderColor: colors.border,
-      borderRadius: 8,
-      borderWidth: 1,
-      paddingHorizontal: 12,
-      paddingVertical: 9,
-    },
-    moodText: {
-      color: colors.ink,
-      fontFamily: fontFamily.bold,
-      fontSize: 13,
-    },
     entryButton: {
       alignItems: 'center',
       backgroundColor: colors.primary,
-      borderRadius: 8,
+      borderRadius: 999,
       justifyContent: 'center',
       marginTop: 4,
       minHeight: 52,
@@ -193,24 +178,34 @@ const createStyles = (colors: PaletteColors) =>
     },
     entryButtonText: {
       color: colors.buttonText,
-      fontFamily: fontFamily.bold,
+      fontFamily: fontFamily.extraBold,
       fontSize: 16,
     },
-    noteCard: {
-      backgroundColor: colors.surfaceWarm,
-      borderRadius: 8,
-      gap: 6,
-      padding: 16,
+    section: {
+      gap: 12,
     },
-    noteTitle: {
+    sectionTitle: {
       color: colors.ink,
       fontFamily: fontFamily.bold,
       fontSize: 16,
     },
-    noteCopy: {
-      color: colors.muted,
-      fontFamily: fontFamily.medium,
+    entryList: {
+      gap: 10,
+    },
+    secondaryButton: {
+      alignItems: 'center',
+      borderColor: colors.border,
+      borderRadius: 999,
+      borderWidth: 1.5,
+      justifyContent: 'center',
+      minHeight: 48,
+    },
+    lightPress: {
+      opacity: 0.72,
+    },
+    secondaryButtonText: {
+      color: colors.ink,
+      fontFamily: fontFamily.bold,
       fontSize: 14,
-      lineHeight: 21,
     },
   });

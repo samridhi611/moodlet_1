@@ -38,6 +38,33 @@
           "resizeMode": "cover",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "MoodCheckIn",
+              "label": "moodlet — Log your mood",
+              "description": "See your streak and log today's mood in one tap.",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "FriendsMood",
+              "label": "moodlet — Friends' moods",
+              "description": "See how your friends are feeling today.",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 3,
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "experiments": {

@@ -1,5 +1,9 @@
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { CheckInSheetProvider } from '@/context/CheckInSheetContext';
+import { EditEntryProvider } from '@/context/EditEntryContext';
+import { EntriesProvider } from '@/context/EntriesContext';
 import { PaletteProvider } from '@/context/PaletteContext';
+import { ProfileProvider } from '@/context/ProfileContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
   Manrope_400Regular,
@@ -31,12 +35,20 @@ SplashScreen.setOptions({
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
-
+ 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <PaletteProvider>
         <AuthProvider>
-          <RootNavigator />
+          <ProfileProvider>
+            <EntriesProvider>
+              <CheckInSheetProvider>
+                <EditEntryProvider>
+                  <RootNavigator />
+                </EditEntryProvider>
+              </CheckInSheetProvider>
+            </EntriesProvider>
+          </ProfileProvider>
         </AuthProvider>
       </PaletteProvider>
       <StatusBar style="auto" />
