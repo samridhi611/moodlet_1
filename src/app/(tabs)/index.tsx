@@ -1,4 +1,8 @@
 import { EntryCard } from '@/components/entry/entry-card';
+import { FriendsMoodWidget } from '@/components/widgets/FriendsMoodWidget';
+import { HourlyMoodWidget } from '@/components/widgets/HourlyMoodWidget';
+import { LogMoodWidget } from '@/components/widgets/LogMoodWidget';
+import { StreakWidget, TodayWidget, WeekWidget } from '@/components/widgets/MiniWidgets';
 import { useCheckInSheet } from '@/context/CheckInSheetContext';
 import { useEntries } from '@/context/EntriesContext';
 import { usePalette } from '@/context/PaletteContext';
@@ -9,12 +13,12 @@ import { useMemo } from 'react';
 import {
   Pressable,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const { username } = useProfile();
@@ -47,6 +51,17 @@ export default function HomeScreen() {
               <Text style={styles.streakText}>{streak}</Text>
             </View>
           )}
+        </View>
+
+        <View style={styles.widgetsSection}>
+          <View style={styles.widgetsRow}>
+            <StreakWidget />
+            <TodayWidget />
+          </View>
+          <WeekWidget />
+          <FriendsMoodWidget />
+          <HourlyMoodWidget />
+          <LogMoodWidget />
         </View>
 
         {todayEntry ? (
@@ -112,6 +127,13 @@ const createStyles = (colors: PaletteColors) =>
     headerCopy: {
       flex: 1,
       gap: 5,
+    },
+    widgetsSection: {
+      gap: 16,
+    },
+    widgetsRow: {
+      flexDirection: 'row',
+      gap: 16,
     },
     overline: {
       color: colors.accentText,

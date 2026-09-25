@@ -19,6 +19,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import './globals.css';
 
 export const unstable_settings = {
@@ -37,22 +38,24 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
  
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <PaletteProvider>
-        <AuthProvider>
-          <ProfileProvider>
-            <EntriesProvider>
-              <CheckInSheetProvider>
-                <EditEntryProvider>
-                  <RootNavigator />
-                </EditEntryProvider>
-              </CheckInSheetProvider>
-            </EntriesProvider>
-          </ProfileProvider>
-        </AuthProvider>
-      </PaletteProvider>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <PaletteProvider>
+          <AuthProvider>
+            <ProfileProvider>
+              <EntriesProvider>
+                <CheckInSheetProvider>
+                  <EditEntryProvider>
+                    <RootNavigator />
+                  </EditEntryProvider>
+                </CheckInSheetProvider>
+              </EntriesProvider>
+            </ProfileProvider>
+          </AuthProvider>
+        </PaletteProvider>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -80,6 +83,7 @@ function RootNavigator() {
     <Stack>
       <Stack.Screen name="welcome" options={{ headerShown: false }} />
       <Stack.Screen name="username-setup" options={{ headerShown: false }} />
+      <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
     </Stack>

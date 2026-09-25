@@ -1,4 +1,4 @@
-import { MoodId } from '@/theme/moods';
+import { MoodId } from '@/theme/mood-data';
 
 // Widget primitives (FlexWidget/TextWidget) can't render lucide-react-native
 // icons, so widgets use emoji stand-ins for the same 8 moods instead.

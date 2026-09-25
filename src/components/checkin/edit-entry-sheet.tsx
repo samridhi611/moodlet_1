@@ -1,22 +1,17 @@
+import { PressableScale } from '@/components/widgets/WidgetCard';
 import { useEditEntry } from '@/context/EditEntryContext';
 import { useEntries } from '@/context/EntriesContext';
 import { usePalette } from '@/context/PaletteContext';
 import { ACTIVITIES, ActivityId } from '@/theme/activities';
 import { fontFamily } from '@/theme/design';
 import { MOODS, MoodId } from '@/theme/moods';
+import { Entry } from '@/types/entry';
 import * as Haptics from 'expo-haptics';
 import { Trash2, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import {
-    Alert,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+
+import { SheetModal } from '@/components/ui/sheet-modal';
 
 export function EditEntrySheet() {
     const { entry, close } = useEditEntry();
@@ -29,14 +24,20 @@ export function EditEntrySheet() {
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // `entry` goes back to null the instant `close()` fires — hang on to the
+    // last one so the form still has something to render while SheetModal
+    // plays its close animation instead of the sheet snapping empty.
+    const [displayEntry, setDisplayEntry] = useState<Entry | null>(null);
+
     useEffect(() => {
         if (!entry) return;
+        setDisplayEntry(entry);
         setMood(entry.mood);
         setActivities(entry.activities);
         setNote(entry.note ?? '');
     }, [entry]);
 
-    if (!entry) return null;
+    if (!displayEntry) return null;
 
     const toggleActivity = (id: ActivityId) => {
         Haptics.selectionAsync();
@@ -47,7 +48,7 @@ export function EditEntrySheet() {
         if (!mood) return;
         setIsSaving(true);
         try {
-            await patchEntry(entry.id, { mood, activities, note: note.trim() || null });
+            await patchEntry(displayEntry.id, { mood, activities, note: note.trim() || null });
             close();
         } catch (e) {
             Alert.alert('Could not save changes', e instanceof Error ? e.message : 'Try again.');
@@ -65,7 +66,7 @@ export function EditEntrySheet() {
                 onPress: async () => {
                     setIsDeleting(true);
                     try {
-                        await removeEntry(entry.id);
+                        await removeEntry(displayEntry.id);
                         close();
                     } catch (e) {
                         Alert.alert('Could not delete entry', e instanceof Error ? e.message : 'Try again.');
@@ -77,148 +78,124 @@ export function EditEntrySheet() {
     };
 
     return (
-        <Modal visible transparent animationType="slide" onRequestClose={close} statusBarTranslucent>
-            <View style={styles.backdrop}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={close} />
+        <SheetModal visible={!!entry} onRequestClose={close} minHeight="55%" maxHeight="88%">
+            <View style={styles.header}>
+                <Text style={[styles.title, { color: colors.ink }]}>Edit entry</Text>
+                <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
+                    <X size={22} color={colors.muted} />
+                </Pressable>
+            </View>
 
-                <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-                    <View style={styles.handle} />
+            <ScrollView contentContainerStyle={styles.body}>
+                <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Mood</Text>
+                <View style={styles.moodRow}>
+                    {MOODS.map(({ id, label, tintBg, tintAccent, Icon }) => {
+                        const selected = mood === id;
+                        return (
+                            <PressableScale
+                                key={id}
+                                scaleTo={0.94}
+                                onPress={() => setMood(id)}
+                                accessibilityRole="button"
+                                accessibilityLabel={label}
+                                accessibilityState={{ selected }}
+                                style={[
+                                    styles.moodChip,
+                                    { backgroundColor: tintBg },
+                                    selected && { borderColor: colors.primary, borderWidth: 2 },
+                                ]}
+                            >
+                                <Icon size={20} color={tintAccent} strokeWidth={2} />
+                                <Text style={[styles.moodChipLabel, { color: tintAccent }]}>{label}</Text>
+                            </PressableScale>
+                        );
+                    })}
+                </View>
 
-                    <View style={styles.header}>
-                        <Text style={[styles.title, { color: colors.ink }]}>Edit entry</Text>
-                        <Pressable onPress={close} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
-                            <X size={22} color={colors.muted} />
-                        </Pressable>
-                    </View>
+                <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Activities</Text>
+                <View style={styles.activityWrap}>
+                    {ACTIVITIES.map(({ id, label, Icon }) => {
+                        const selected = activities.includes(id);
+                        return (
+                            <PressableScale
+                                key={id}
+                                scaleTo={0.94}
+                                onPress={() => toggleActivity(id)}
+                                accessibilityRole="button"
+                                accessibilityLabel={label}
+                                accessibilityState={{ selected }}
+                                style={[
+                                    styles.activityChip,
+                                    {
+                                        backgroundColor: selected ? colors.primarySoft : colors.surface,
+                                        borderColor: selected ? colors.primary : colors.border,
+                                    },
+                                ]}
+                            >
+                                <Icon size={16} color={selected ? colors.primaryDark : colors.muted} />
+                                <Text
+                                    style={[
+                                        styles.activityLabel,
+                                        { color: selected ? colors.primaryDark : colors.ink },
+                                    ]}
+                                >
+                                    {label}
+                                </Text>
+                            </PressableScale>
+                        );
+                    })}
+                </View>
 
-                    <ScrollView contentContainerStyle={styles.body}>
-                        <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Mood</Text>
-                        <View style={styles.moodRow}>
-                            {MOODS.map(({ id, label, tintBg, tintAccent, Icon }) => {
-                                const selected = mood === id;
-                                return (
-                                    <Pressable
-                                        key={id}
-                                        onPress={() => setMood(id)}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={label}
-                                        accessibilityState={{ selected }}
-                                        style={[
-                                            styles.moodChip,
-                                            { backgroundColor: tintBg },
-                                            selected && { borderColor: colors.primary, borderWidth: 2 },
-                                        ]}
-                                    >
-                                        <Icon size={20} color={tintAccent} strokeWidth={2} />
-                                        <Text style={[styles.moodChipLabel, { color: tintAccent }]}>{label}</Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
+                <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Note</Text>
+                <View style={[styles.noteFrame, { borderColor: colors.border }]}>
+                    <TextInput
+                        value={note}
+                        onChangeText={setNote}
+                        placeholder="Write a few words…"
+                        placeholderTextColor={colors.softMuted}
+                        multiline
+                        accessibilityLabel="Note"
+                        style={[styles.noteInput, { color: colors.ink }]}
+                    />
+                </View>
+            </ScrollView>
 
-                        <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Activities</Text>
-                        <View style={styles.activityWrap}>
-                            {ACTIVITIES.map(({ id, label, Icon }) => {
-                                const selected = activities.includes(id);
-                                return (
-                                    <Pressable
-                                        key={id}
-                                        onPress={() => toggleActivity(id)}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={label}
-                                        accessibilityState={{ selected }}
-                                        style={[
-                                            styles.activityChip,
-                                            {
-                                                backgroundColor: selected ? colors.primarySoft : colors.surface,
-                                                borderColor: selected ? colors.primary : colors.border,
-                                            },
-                                        ]}
-                                    >
-                                        <Icon size={16} color={selected ? colors.primaryDark : colors.muted} />
-                                        <Text
-                                            style={[
-                                                styles.activityLabel,
-                                                { color: selected ? colors.primaryDark : colors.ink },
-                                            ]}
-                                        >
-                                            {label}
-                                        </Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </View>
-
-                        <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Note</Text>
-                        <View style={[styles.noteFrame, { borderColor: colors.border }]}>
-                            <TextInput
-                                value={note}
-                                onChangeText={setNote}
-                                placeholder="Write a few words…"
-                                placeholderTextColor={colors.softMuted}
-                                multiline
-                                accessibilityLabel="Note"
-                                style={[styles.noteInput, { color: colors.ink }]}
-                            />
-                        </View>
-                    </ScrollView>
-
-                    <View style={styles.footer}>
-                        <Pressable
-                            onPress={handleDelete}
-                            disabled={isDeleting}
-                            accessibilityRole="button"
-                            accessibilityLabel="Delete entry"
-                            style={[styles.deleteButton, { borderColor: colors.error }]}
-                        >
-                            <Trash2 size={16} color={colors.error} strokeWidth={2} />
-                            <Text style={[styles.deleteText, { color: colors.error }]}>
-                                {isDeleting ? 'Deleting…' : 'Delete'}
-                            </Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={handleSave}
-                            disabled={isSaving || !mood}
-                            accessibilityRole="button"
-                            style={[
-                                styles.saveButton,
-                                { backgroundColor: colors.primary, opacity: isSaving ? 0.6 : 1 },
-                            ]}
-                        >
-                            <Text style={[styles.saveText, { color: colors.buttonText }]}>
-                                {isSaving ? 'Saving…' : 'Save changes'}
-                            </Text>
-                        </Pressable>
-                    </View>
+            <View style={styles.footer}>
+                <PressableScale
+                    scaleTo={0.95}
+                    onPress={handleDelete}
+                    disabled={isDeleting}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete entry"
+                    style={[styles.deleteButton, { borderColor: colors.error }]}
+                >
+                    <Trash2 size={16} color={colors.error} strokeWidth={2} />
+                    <Text style={[styles.deleteText, { color: colors.error }]}>
+                        {isDeleting ? 'Deleting…' : 'Delete'}
+                    </Text>
+                </PressableScale>
+                <View style={styles.saveButtonWrap}>
+                    <PressableScale
+                        scaleTo={0.97}
+                        onPress={handleSave}
+                        disabled={isSaving || !mood}
+                        accessibilityRole="button"
+                        style={[
+                            styles.saveButton,
+                            { backgroundColor: colors.primary, opacity: isSaving ? 0.6 : 1 },
+                        ]}
+                    >
+                        <Text style={[styles.saveText, { color: colors.buttonText }]}>
+                            {isSaving ? 'Saving…' : 'Save changes'}
+                        </Text>
+                    </PressableScale>
                 </View>
             </View>
-        </Modal>
+        </SheetModal>
     );
 }
 
 const styles = StyleSheet.create({
-    backdrop: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.35)',
-    },
-    sheet: {
-        minHeight: '55%',
-        maxHeight: '88%',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 24,
-    },
-    handle: {
-        alignSelf: 'center',
-        width: 32,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: 'rgba(0,0,0,0.15)',
-        marginBottom: 12,
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -306,8 +283,10 @@ const styles = StyleSheet.create({
         fontFamily: fontFamily.bold,
         fontSize: 14,
     },
-    saveButton: {
+    saveButtonWrap: {
         flex: 1,
+    },
+    saveButton: {
         minHeight: 52,
         borderRadius: 999,
         alignItems: 'center',

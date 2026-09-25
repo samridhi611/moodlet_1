@@ -2,7 +2,8 @@ import { usePalette } from '@/context/PaletteContext';
 import { fontFamily, PaletteColors } from '@/theme/design';
 import { Users } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function FriendsScreen() {
   const { colors } = usePalette();

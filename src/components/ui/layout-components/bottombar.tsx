@@ -1,10 +1,12 @@
 import { usePalette } from '@/context/PaletteContext';
+import { fontFamily } from '@/theme/design';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import { Calendar, House, Plus, User, Users } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
-import { Dimensions, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+    Easing,
     interpolate,
     SharedValue,
     useAnimatedStyle,
@@ -18,6 +20,7 @@ const { width } = Dimensions.get('window');
 // ─── Colour helpers ───────────────────────────────────────────────────────────
 
 function hexAlpha(hex: string, alpha: number): string {
+    'worklet';
     const n = parseInt(hex.replace('#', ''), 16);
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
 }
@@ -28,49 +31,63 @@ const FAB = ({
     isSheetOpen,
     isOpen,
     accentColor,
-    iconColor,
     onPress,
 }: {
     isSheetOpen: SharedValue<number>;
     isOpen: boolean;
     accentColor: string;
-    iconColor: string;
     onPress: () => void;
 }) => {
+    const pressScale = useSharedValue(1);
+
+    const pressStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pressScale.value }],
+    }));
     const rotateStyle = useAnimatedStyle(() => ({
         transform: [
             { rotate: `${interpolate(isSheetOpen.value, [0, 1], [0, 45])}deg` },
         ],
     }));
     const scaleStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: withSpring(isSheetOpen.value ? 1.06 : 1, { damping: 12 }) }],
+        transform: [{ scale: withSpring(isSheetOpen.value ? 1.04 : 1, { damping: 16, stiffness: 220 }) }],
     }));
 
     return (
-        <Pressable
-            onPress={onPress}
-            accessibilityRole="button"
-            accessibilityLabel="Log mood"
-            accessibilityState={{ expanded: isOpen }}
-        >
-            <Animated.View
-                style={[styles.fab, scaleStyle, { backgroundColor: accentColor, shadowColor: accentColor }]}
+        <View style={styles.fabSlot}>
+            <Pressable
+                onPress={onPress}
+                onPressIn={() => {
+                    pressScale.value = withSpring(0.92, { damping: 16, stiffness: 260 });
+                }}
+                onPressOut={() => {
+                    pressScale.value = withSpring(1, { damping: 14, stiffness: 220 });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Log mood"
+                accessibilityState={{ expanded: isOpen }}
             >
-                <Animated.View style={rotateStyle}>
-                    <Plus color={iconColor} size={22} strokeWidth={2.5} />
+                <Animated.View style={pressStyle}>
+                    <Animated.View
+                        style={[styles.fab, scaleStyle, { backgroundColor: accentColor, shadowColor: accentColor }]}
+                    >
+                        <Animated.View style={rotateStyle}>
+                            <Plus color="#FFFFFF" size={24} strokeWidth={2.6} />
+                        </Animated.View>
+                    </Animated.View>
                 </Animated.View>
-            </Animated.View>
-        </Pressable>
+            </Pressable>
+        </View>
     );
 };
 
-// ─── Nav tab with pip indicator ───────────────────────────────────────────────
+// ─── Nav tab: icon + label + pip indicator ─────────────────────────────────────
 
 const NavTab = ({
     Icon,
     label,
     isActive,
     accentColor,
+    chipColor,
     iconColor,
     onPress,
 }: {
@@ -78,35 +95,55 @@ const NavTab = ({
     label: string;
     isActive: boolean;
     accentColor: string;
+    chipColor: string;
     iconColor: string;
     onPress: () => void;
 }) => {
-    const bgStyle = useAnimatedStyle(() => ({
-        backgroundColor: withTiming(
-            isActive ? hexAlpha(accentColor, 0.22) : 'transparent',
-            { duration: 200 }
-        ),
+    const pressScale = useSharedValue(1);
+
+    const pressStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: pressScale.value }],
     }));
-    const pipStyle = useAnimatedStyle(() => ({
-        opacity: withTiming(isActive ? 1 : 0, { duration: 180 }),
-        transform: [{ scale: withSpring(isActive ? 1 : 0.2, { damping: 11 }) }],
+    // The highlight pill fades and scales in behind the icon on its own —
+    // the tab itself never resizes, so switching tabs reads as a soft glow
+    // moving in rather than the whole row jumping between two sizes.
+    const pillStyle = useAnimatedStyle(() => ({
+        opacity: withTiming(isActive ? 1 : 0, { duration: 200, easing: Easing.out(Easing.quad) }),
+        transform: [
+            { scale: withTiming(isActive ? 1 : 0.8, { duration: 200, easing: Easing.out(Easing.quad) }) },
+        ],
     }));
+
+    const tintColor = isActive ? accentColor : hexAlpha(iconColor, 0.42);
 
     return (
         <Pressable
             onPress={onPress}
+            onPressIn={() => {
+                pressScale.value = withSpring(0.92, { damping: 16, stiffness: 260 });
+            }}
+            onPressOut={() => {
+                pressScale.value = withSpring(1, { damping: 12, stiffness: 220 });
+            }}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={`${label} tab${isActive ? ', currently selected' : ''}`}
             style={styles.tabPressable}
         >
-            <Animated.View style={[styles.navTab, bgStyle]}>
-                <Icon
-                    size={21}
-                    color={isActive ? accentColor : hexAlpha(iconColor, 0.45)}
-                    strokeWidth={isActive ? 2.1 : 1.7}
-                />
-                <Animated.View style={[styles.pip, pipStyle, { backgroundColor: accentColor }]} />
+            <Animated.View style={pressStyle}>
+                <View style={styles.navTab}>
+                    <Animated.View
+                        pointerEvents="none"
+                        style={[styles.navTabPill, pillStyle, { backgroundColor: hexAlpha(chipColor, 0.3) }]}
+                    />
+                    <Icon size={21} color={tintColor} strokeWidth={isActive ? 2.3 : 1.8} />
+                    <Text
+                        style={[styles.navLabel, { color: tintColor }, isActive && styles.navLabelActive]}
+                        numberOfLines={1}
+                    >
+                        {label}
+                    </Text>
+                </View>
             </Animated.View>
         </Pressable>
     );
@@ -118,30 +155,35 @@ const NavTab = ({
 
 const GlassIsland = ({
     children,
-    accentColor,
+    surfaceColor,
+    shadowColor,
 }: {
     children: React.ReactNode;
-    accentColor: string;
+    surfaceColor: string;
+    shadowColor: string;
 }) => {
-    const sharedStyle = {
-        borderColor: hexAlpha(accentColor, 0.3),
-        shadowColor: accentColor,
-    };
-
     if (Platform.OS === 'ios' || Platform.OS === 'web') {
         return (
-            <BlurView
-                tint="light"
-                intensity={40}
-                style={[styles.island, sharedStyle, { backgroundColor: hexAlpha(accentColor, 0.15) }]}
-            >
-                {children}
-            </BlurView>
+            <View style={[styles.islandShadow, { shadowColor }]}>
+                <BlurView
+                    tint="light"
+                    intensity={60}
+                    style={[styles.island, { backgroundColor: hexAlpha(surfaceColor, 0.72) }]}
+                >
+                    {children}
+                </BlurView>
+            </View>
         );
     }
 
     return (
-        <View style={[styles.island, sharedStyle, { backgroundColor: hexAlpha(accentColor, 0.82) }]}>
+        <View
+            style={[
+                styles.island,
+                styles.islandShadow,
+                { shadowColor, backgroundColor: hexAlpha(surfaceColor, 0.97) },
+            ]}
+        >
             {children}
         </View>
     );
@@ -160,7 +202,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
     onOpenMoodSheet,
     isMoodSheetOpen,
 }) => {
-    const { tokens } = usePalette();
+    const { tokens, colors } = usePalette();
     const isSheetOpen = useSharedValue(0);
 
     useEffect(() => {
@@ -172,49 +214,47 @@ const BottomBar: React.FC<BottomBarProps> = ({
     }, [onOpenMoodSheet]);
 
     const activeRoute = state.routes[state.index]?.name;
-    const accentColor = tokens.accent;
-    const iconColor = tokens.text;
+    const tabProps = {
+        accentColor: tokens.accent,
+        chipColor: tokens.btnBg,
+        iconColor: tokens.text,
+    };
 
     return (
         <View style={styles.container} pointerEvents="box-none">
-            <GlassIsland accentColor={accentColor}>
+            <GlassIsland surfaceColor={colors.surface} shadowColor={tokens.text}>
                 <NavTab
                     Icon={House}
                     label="Home"
                     isActive={activeRoute === 'index'}
-                    accentColor={accentColor}
-                    iconColor={iconColor}
+                    {...tabProps}
                     onPress={() => navigation.navigate('index' as never)}
                 />
                 <NavTab
                     Icon={Users}
                     label="Friends"
                     isActive={activeRoute === 'friends'}
-                    accentColor={accentColor}
-                    iconColor={iconColor}
+                    {...tabProps}
                     onPress={() => navigation.navigate('friends' as never)}
                 />
                 <FAB
                     isSheetOpen={isSheetOpen}
                     isOpen={isMoodSheetOpen}
-                    accentColor={accentColor}
-                    iconColor={iconColor}
+                    accentColor={tokens.accent}
                     onPress={handleFabPress}
                 />
                 <NavTab
                     Icon={Calendar}
                     label="Memories"
                     isActive={activeRoute === 'memories'}
-                    accentColor={accentColor}
-                    iconColor={iconColor}
+                    {...tabProps}
                     onPress={() => navigation.navigate('memories' as never)}
                 />
                 <NavTab
                     Icon={User}
                     label="Profile"
                     isActive={activeRoute === 'profile'}
-                    accentColor={accentColor}
-                    iconColor={iconColor}
+                    {...tabProps}
                     onPress={() => navigation.navigate('profile' as never)}
                 />
             </GlassIsland>
@@ -235,19 +275,23 @@ const styles = StyleSheet.create({
         paddingBottom: 26,
         pointerEvents: 'box-none',
     },
+    islandShadow: {
+        borderRadius: 999,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
+        elevation: 12,
+    },
     island: {
-        width: width * 0.88,
-        height: 66,
-        borderRadius: 26,
+        width: width * 0.9,
+        height: 72,
+        borderRadius: 999,
         borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.85)',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 6,
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
-        elevation: 14,
+        paddingHorizontal: 8,
         overflow: Platform.OS === 'android' ? 'visible' : 'hidden',
     },
     tabPressable: {
@@ -257,26 +301,42 @@ const styles = StyleSheet.create({
     navTab: {
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 16,
+        borderRadius: 18,
         gap: 3,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
+        minWidth: 58,
+        paddingHorizontal: 10,
+        paddingVertical: 7,
     },
-    pip: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
+    navTabPill: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 18,
     },
-    fab: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
+    navLabel: {
+        fontFamily: fontFamily.semiBold,
+        fontSize: 10.5,
+        letterSpacing: 0.1,
+    },
+    navLabelActive: {
+        fontFamily: fontFamily.extraBold,
+    },
+    fabSlot: {
+        width: 60,
+        height: 60,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
+        marginHorizontal: 2,
+    },
+    fab: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        borderWidth: 3,
+        borderColor: 'rgba(255,255,255,0.9)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 12,
         elevation: 8,
-        marginHorizontal: 4,
     },
 });

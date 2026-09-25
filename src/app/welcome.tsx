@@ -4,7 +4,8 @@ import { usePalette } from '@/context/PaletteContext';
 import { Image } from 'expo-image';
 import { Redirect } from 'expo-router';
 import { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WelcomeScreen() {
   const { isSignedIn, signInWithGoogle } = useAuth();

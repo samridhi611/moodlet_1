@@ -110,6 +110,23 @@ const createTypographyStyles = (colors: PaletteColors) =>
         },
     });
 
+// ─── Card chrome ────────────────────────────────────────────────────────────
+// Shared "bento card" background/border/radius, used by the in-app dashboard
+// widget cards (src/components/widgets/WidgetCard.tsx) so they don't
+// hardcode surface colors of their own.
+
+const createCardStyles = (colors: PaletteColors) =>
+    StyleSheet.create({
+        base: {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderRadius: 24,
+            padding: 18,
+            overflow: 'hidden',
+        },
+    });
+
 // ─── Layout ──────────────────────────────────────────────────────────────────
 // Static — no color dependency, defined once at module level
 
@@ -129,5 +146,6 @@ export const createSharedStyles = (colors: PaletteColors) => ({
     btn: createButtonStyles(colors),
     input: createInputStyles(colors),
     type: createTypographyStyles(colors),
+    card: createCardStyles(colors),
     layout, // static, included for convenience
 });

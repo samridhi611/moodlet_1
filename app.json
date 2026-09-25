@@ -4,7 +4,7 @@
     "slug": "moodlet",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./src/assets/favicon.ico",
+    "icon": "./src/assets/images/ios-icon.png",
     "scheme": "moodlet",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -16,7 +16,6 @@
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./src/assets/images/android-icon-foreground.png",
-        "backgroundImage": "./src/assets/images/android-icon-background.png",
         "monochromeImage": "./src/assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
@@ -33,10 +32,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./src/assets/images/splash-screen.png",
+          "image": "./src/assets/images/logo.png",
           "imageWidth": 200,
-          "resizeMode": "cover",
-          "backgroundColor": "#ffffff"
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F1E8"
         }
       ],
       [
@@ -62,14 +61,33 @@
               "targetCellWidth": 4,
               "targetCellHeight": 3,
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "HourlyMood",
+              "label": "Mood Timeline",
+              "description": "Your mood hour by hour",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
             }
           ]
         }
-      ]
+      ],
+      "./plugins/withAndroidWorkManagerFix"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9b88f003-0adb-4c1c-8905-57e6b2c0941c"
+      }
+    },
+    "owner": "samridhi611"
   }
 }

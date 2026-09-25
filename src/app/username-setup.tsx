@@ -8,11 +8,11 @@ import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function UsernameSetupScreen() {
   const { saveUsername, profile } = useProfile()

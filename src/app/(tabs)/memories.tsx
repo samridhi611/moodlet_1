@@ -5,7 +5,8 @@ import { fontFamily, PaletteColors } from '@/theme/design';
 import { MOOD_MAP, MoodId } from '@/theme/moods';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MemoriesScreen() {
   const { colors } = usePalette();

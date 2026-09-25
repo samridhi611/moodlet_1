@@ -1,3 +1,4 @@
+import { PressableScale } from '@/components/widgets/WidgetCard';
 import { useCheckInSheet } from '@/context/CheckInSheetContext';
 import { useEntries } from '@/context/EntriesContext';
 import { usePalette } from '@/context/PaletteContext';
@@ -8,21 +9,15 @@ import { MOOD_MAP, MOODS, MoodId } from '@/theme/moods';
 import * as Haptics from 'expo-haptics';
 import { LucideIcon, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-    Alert,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
+    withSpring,
     withTiming,
 } from 'react-native-reanimated';
+
+import { SheetModal } from '@/components/ui/sheet-modal';
 
 type Step = 'mood' | 'activities' | 'notes';
 
@@ -60,8 +55,11 @@ export function CheckInSheet() {
         fillProgress.value = 0;
     }, [fillProgress]);
 
+    // Resets on open (not close) so the sheet's content doesn't jump back to
+    // step one while it's still sliding away — see SheetModal, which keeps
+    // this mounted through its own close animation.
     useEffect(() => {
-        if (!isOpen) reset();
+        if (isOpen) reset();
     }, [isOpen, reset]);
 
     // Whatever activities/note the user has picked so far are persisted the
@@ -140,171 +138,165 @@ export function CheckInSheet() {
     const stepCount = 3;
 
     return (
-        <Modal
-            visible={isOpen}
-            transparent
-            animationType="slide"
-            onRequestClose={handleClose}
-            statusBarTranslucent
-        >
-            <View style={styles.backdrop}>
-                <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
+        <SheetModal visible={isOpen} onRequestClose={handleClose} minHeight="60%" maxHeight="85%">
+            <View style={styles.header}>
+                <View style={styles.stepDots} accessibilityElementsHidden importantForAccessibility="no">
+                    {(['mood', 'activities', 'notes'] as Step[]).map((s, i) => (
+                        <View
+                            key={s}
+                            style={[
+                                styles.stepDot,
+                                { backgroundColor: i <= stepIndex ? colors.primary : colors.border },
+                            ]}
+                        />
+                    ))}
+                </View>
+                <Text
+                    accessibilityRole="text"
+                    style={styles.srOnlyStepLabel}
+                >{`Step ${stepIndex + 1} of ${stepCount}`}</Text>
+                <Pressable
+                    onPress={handleClose}
+                    hitSlop={12}
+                    accessibilityLabel="Close check-in"
+                    accessibilityRole="button"
+                >
+                    <X size={22} color={colors.muted} />
+                </Pressable>
+            </View>
 
-                <View style={[styles.sheet, { backgroundColor: colors.background }]}>
-                    <View style={styles.handle} />
-
-                    <View style={styles.header}>
-                        <View style={styles.stepDots} accessibilityElementsHidden importantForAccessibility="no">
-                            {(['mood', 'activities', 'notes'] as Step[]).map((s, i) => (
-                                <View
-                                    key={s}
-                                    style={[
-                                        styles.stepDot,
-                                        { backgroundColor: i <= stepIndex ? colors.primary : colors.border },
-                                    ]}
-                                />
-                            ))}
-                        </View>
-                        <Text
-                            accessibilityRole="text"
-                            style={styles.srOnlyStepLabel}
-                        >{`Step ${stepIndex + 1} of ${stepCount}`}</Text>
-                        <Pressable
-                            onPress={handleClose}
-                            hitSlop={12}
-                            accessibilityLabel="Close check-in"
-                            accessibilityRole="button"
-                        >
-                            <X size={22} color={colors.muted} />
-                        </Pressable>
+            {step === 'mood' && (
+                <View style={styles.stepBody}>
+                    <Text style={[styles.title, { color: colors.ink }]}>
+                        How are you arriving right now?
+                    </Text>
+                    <View style={styles.moodGrid}>
+                        {MOODS.map(({ id, label, tintBg, tintAccent, Icon }) => (
+                            <MoodTile
+                                key={id}
+                                label={label}
+                                tintBg={tintBg}
+                                tintAccent={tintAccent}
+                                Icon={Icon}
+                                selected={mood === id}
+                                reduceMotion={reduceMotion}
+                                borderColor={colors.primary}
+                                onPress={() => handleSelectMood(id)}
+                            />
+                        ))}
                     </View>
-
-                    {step === 'mood' && (
-                        <View style={styles.stepBody}>
-                            <Text style={[styles.title, { color: colors.ink }]}>
-                                How are you arriving right now?
-                            </Text>
-                            <View style={styles.moodGrid}>
-                                {MOODS.map(({ id, label, tintBg, tintAccent, Icon }) => (
-                                    <MoodTile
-                                        key={id}
-                                        label={label}
-                                        tintBg={tintBg}
-                                        tintAccent={tintAccent}
-                                        Icon={Icon}
-                                        selected={mood === id}
-                                        reduceMotion={reduceMotion}
-                                        borderColor={colors.primary}
-                                        onPress={() => handleSelectMood(id)}
-                                    />
-                                ))}
-                            </View>
-                            {mood && (
-                                <View
-                                    style={[styles.fillTrack, { backgroundColor: colors.border }]}
-                                    accessibilityLabel={isCreatingMood ? 'Saving mood…' : undefined}
-                                >
-                                    <Animated.View
-                                        style={[styles.fillBar, fillStyle, { backgroundColor: colors.primary }]}
-                                    />
-                                </View>
-                            )}
-                        </View>
-                    )}
-
-                    {step === 'activities' && mood && (
-                        <View style={styles.stepBody}>
-                            <Text style={[styles.title, { color: colors.ink }]}>
-                                Anything shaping that {MOOD_MAP[mood].label.toLowerCase()} feeling?
-                            </Text>
-                            <ScrollView contentContainerStyle={styles.activityWrap}>
-                                {ACTIVITIES.map(({ id, label, Icon }) => {
-                                    const selected = activities.includes(id);
-                                    return (
-                                        <Pressable
-                                            key={id}
-                                            onPress={() => toggleActivity(id)}
-                                            accessibilityRole="button"
-                                            accessibilityState={{ selected }}
-                                            accessibilityLabel={label}
-                                            style={[
-                                                styles.activityChip,
-                                                {
-                                                    backgroundColor: selected ? colors.primarySoft : colors.surface,
-                                                    borderColor: selected ? colors.primary : colors.border,
-                                                },
-                                            ]}
-                                        >
-                                            <Icon size={16} color={selected ? colors.primaryDark : colors.muted} />
-                                            <Text
-                                                style={[
-                                                    styles.activityLabel,
-                                                    { color: selected ? colors.primaryDark : colors.ink },
-                                                ]}
-                                            >
-                                                {label}
-                                            </Text>
-                                        </Pressable>
-                                    );
-                                })}
-                            </ScrollView>
-                            <View style={styles.footerRow}>
-                                <Pressable onPress={handleClose} style={styles.skipButton}>
-                                    <Text style={[styles.skipText, { color: colors.muted }]}>Done for now</Text>
-                                </Pressable>
-                                <Pressable
-                                    onPress={() => setStep('notes')}
-                                    style={[styles.nextButton, { backgroundColor: colors.primary }]}
-                                >
-                                    <Text style={[styles.nextText, { color: colors.buttonText }]}>Next</Text>
-                                </Pressable>
-                            </View>
-                        </View>
-                    )}
-
-                    {step === 'notes' && mood && (
-                        <View style={styles.stepBody}>
-                            <Text style={[styles.title, { color: colors.ink }]}>
-                                Want to say more? (optional)
-                            </Text>
-                            <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Note</Text>
-                            <View style={[styles.noteFrame, { borderColor: colors.border }]}>
-                                <TextInput
-                                    value={note}
-                                    onChangeText={setNote}
-                                    placeholder="Write a few words…"
-                                    placeholderTextColor={colors.softMuted}
-                                    multiline
-                                    accessibilityLabel="Note"
-                                    style={[styles.noteInput, { color: colors.ink }]}
-                                />
-                            </View>
-                            <Text style={[styles.hint, { color: colors.softMuted }]}>
-                                Voice and photo notes are coming in a future update — text works for now.
-                            </Text>
-                            <Pressable
-                                onPress={handleSave}
-                                disabled={isFinalizing}
-                                accessibilityRole="button"
-                                style={[
-                                    styles.saveButton,
-                                    { backgroundColor: colors.primary, opacity: isFinalizing ? 0.6 : 1 },
-                                ]}
-                            >
-                                <Text style={[styles.saveText, { color: colors.buttonText }]}>
-                                    {isFinalizing ? 'Saving…' : 'Save entry'}
-                                </Text>
-                            </Pressable>
+                    {mood && (
+                        <View
+                            style={[styles.fillTrack, { backgroundColor: colors.border }]}
+                            accessibilityLabel={isCreatingMood ? 'Saving mood…' : undefined}
+                        >
+                            <Animated.View
+                                style={[styles.fillBar, fillStyle, { backgroundColor: colors.primary }]}
+                            />
                         </View>
                     )}
                 </View>
-            </View>
-        </Modal>
+            )}
+
+            {step === 'activities' && mood && (
+                <View style={styles.stepBody}>
+                    <Text style={[styles.title, { color: colors.ink }]}>
+                        Anything shaping that {MOOD_MAP[mood].label.toLowerCase()} feeling?
+                    </Text>
+                    <ScrollView contentContainerStyle={styles.activityWrap}>
+                        {ACTIVITIES.map(({ id, label, Icon }) => {
+                            const selected = activities.includes(id);
+                            return (
+                                <PressableScale
+                                    key={id}
+                                    scaleTo={0.94}
+                                    onPress={() => toggleActivity(id)}
+                                    accessibilityRole="button"
+                                    accessibilityState={{ selected }}
+                                    accessibilityLabel={label}
+                                    style={[
+                                        styles.activityChip,
+                                        {
+                                            backgroundColor: selected ? colors.primarySoft : colors.surface,
+                                            borderColor: selected ? colors.primary : colors.border,
+                                        },
+                                    ]}
+                                >
+                                    <Icon size={16} color={selected ? colors.primaryDark : colors.muted} />
+                                    <Text
+                                        style={[
+                                            styles.activityLabel,
+                                            { color: selected ? colors.primaryDark : colors.ink },
+                                        ]}
+                                    >
+                                        {label}
+                                    </Text>
+                                </PressableScale>
+                            );
+                        })}
+                    </ScrollView>
+                    <View style={styles.footerRow}>
+                        <Pressable onPress={handleClose} style={styles.skipButton}>
+                            <Text style={[styles.skipText, { color: colors.muted }]}>Done for now</Text>
+                        </Pressable>
+                        <View style={styles.nextButtonWrap}>
+                            <PressableScale
+                                scaleTo={0.96}
+                                onPress={() => setStep('notes')}
+                                style={[styles.nextButton, { backgroundColor: colors.primary }]}
+                            >
+                                <Text style={[styles.nextText, { color: colors.buttonText }]}>Next</Text>
+                            </PressableScale>
+                        </View>
+                    </View>
+                </View>
+            )}
+
+            {step === 'notes' && mood && (
+                <View style={styles.stepBody}>
+                    <Text style={[styles.title, { color: colors.ink }]}>
+                        Want to say more? (optional)
+                    </Text>
+                    <Text style={[styles.inputLabel, { color: colors.softMuted }]}>Note</Text>
+                    <View style={[styles.noteFrame, { borderColor: colors.border }]}>
+                        <TextInput
+                            value={note}
+                            onChangeText={setNote}
+                            placeholder="Write a few words…"
+                            placeholderTextColor={colors.softMuted}
+                            multiline
+                            accessibilityLabel="Note"
+                            style={[styles.noteInput, { color: colors.ink }]}
+                        />
+                    </View>
+                    <Text style={[styles.hint, { color: colors.softMuted }]}>
+                        Voice and photo notes are coming in a future update — text works for now.
+                    </Text>
+                    <View style={styles.saveButtonWrap}>
+                        <PressableScale
+                            scaleTo={0.97}
+                            onPress={handleSave}
+                            disabled={isFinalizing}
+                            accessibilityRole="button"
+                            style={[
+                                styles.saveButton,
+                                { backgroundColor: colors.primary, opacity: isFinalizing ? 0.6 : 1 },
+                            ]}
+                        >
+                            <Text style={[styles.saveText, { color: colors.buttonText }]}>
+                                {isFinalizing ? 'Saving…' : 'Save entry'}
+                            </Text>
+                        </PressableScale>
+                    </View>
+                </View>
+            )}
+        </SheetModal>
     );
 }
 
 // docs/Moodlet_Design_Guide_v1.0.docx §7.1 — selected state is a border plus
-// a scale(1.08) spring; skipped under reduce-motion.
+// a scale spring; skipped under reduce-motion. Kept subtle (1.05, damped) so
+// the grid doesn't jump around as the user taps between moods.
 function MoodTile({
     label,
     tintBg,
@@ -324,27 +316,42 @@ function MoodTile({
     borderColor: string;
     onPress: () => void;
 }) {
-    const scale = useSharedValue(1);
+    const selectScale = useSharedValue(1);
+    const pressScale = useSharedValue(1);
 
     useEffect(() => {
-        scale.value = reduceMotion ? 1 : withTiming(selected ? 1.08 : 1, { duration: 200 });
-    }, [selected, reduceMotion, scale]);
+        selectScale.value = reduceMotion
+            ? 1
+            : withSpring(selected ? 1.05 : 1, { damping: 16, stiffness: 220 });
+    }, [selected, reduceMotion, selectScale]);
 
     const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ scale: scale.value }],
+        transform: [{ scale: selectScale.value * pressScale.value }],
     }));
 
     return (
         <Animated.View style={[styles.moodTileWrap, animatedStyle]}>
             <Pressable
                 onPress={onPress}
+                onPressIn={() => {
+                    pressScale.value = withSpring(0.93, { damping: 16, stiffness: 260 });
+                }}
+                onPressOut={() => {
+                    pressScale.value = withSpring(1, { damping: 14, stiffness: 220 });
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={label}
                 accessibilityState={{ selected }}
                 style={[
                     styles.moodTile,
                     { backgroundColor: tintBg },
-                    selected && { borderColor, borderWidth: 2 },
+                    selected && {
+                        borderColor,
+                        borderWidth: 2,
+                        shadowColor: tintAccent,
+                        shadowOpacity: 0.3,
+                        elevation: 4,
+                    },
                 ]}
             >
                 <Icon size={26} color={tintAccent} strokeWidth={2} />
@@ -355,28 +362,6 @@ function MoodTile({
 }
 
 const styles = StyleSheet.create({
-    backdrop: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.35)',
-    },
-    sheet: {
-        minHeight: '60%',
-        maxHeight: '85%',
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 28,
-    },
-    handle: {
-        alignSelf: 'center',
-        width: 32,
-        height: 6,
-        borderRadius: 3,
-        backgroundColor: 'rgba(0,0,0,0.15)',
-        marginBottom: 12,
-    },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -421,12 +406,15 @@ const styles = StyleSheet.create({
     },
     moodTile: {
         flex: 1,
-        borderRadius: 14,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
         gap: 4,
         borderWidth: 2,
         borderColor: 'transparent',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0,
+        shadowRadius: 10,
     },
     moodLabel: {
         fontFamily: fontFamily.semiBold,
@@ -472,9 +460,11 @@ const styles = StyleSheet.create({
         fontFamily: fontFamily.bold,
         fontSize: 14,
     },
-    nextButton: {
+    nextButtonWrap: {
         flex: 1,
         marginLeft: 16,
+    },
+    nextButton: {
         minHeight: 52,
         borderRadius: 999,
         alignItems: 'center',
@@ -506,12 +496,14 @@ const styles = StyleSheet.create({
         fontFamily: fontFamily.medium,
         fontSize: 12,
     },
+    saveButtonWrap: {
+        marginTop: 'auto',
+    },
     saveButton: {
         minHeight: 56,
         borderRadius: 999,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 'auto',
     },
     saveText: {
         fontFamily: fontFamily.extraBold,

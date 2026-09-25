@@ -1,5 +1,7 @@
-import { MoodId } from '@/theme/moods';
+import { MOOD_INFO as MOODS, MOOD_INFO_MAP as MOOD_MAP, MoodId } from '@/theme/mood-data';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { dateKey, loadHours } from './hours-store';
+import { MOOD_EMOJI } from './mood-emoji';
 
 export type MoodWidgetData = {
     username: string;
@@ -11,15 +13,31 @@ export type FriendMoodEntry = {
     id: string;
     name: string;
     mood: MoodId;
-    timeLabel: string;
+    avatarColor: string;
+    status: string;
+    minutesAgo: number;
+    reacted: boolean;
 };
 
 export type FriendsWidgetData = {
     friends: FriendMoodEntry[];
 };
 
+// 24 hourly slots for "today". A slot is null when nothing was logged for
+// that hour. Deliberately carries no color — hour-bar/pill colors are
+// resolved from the caller-supplied palette (src/widgets/palette-for-widgets.ts),
+// not from moods.ts's tintBg/tintAccent (those are entry-card tints only).
+export type HourCell = { moodId: MoodId; emoji: string; score: number } | null;
+
+export type HourWidgetProps = {
+    hours: HourCell[]; // 24 slots, index = hour of day (0-23)
+    avgMoodId: MoodId | null;
+    avgEmoji: string | null;
+};
+
 const MOOD_WIDGET_CACHE_KEY = '@moodlet_widget_mood_cache';
 const FRIENDS_WIDGET_CACHE_KEY = '@moodlet_widget_friends_cache';
+const HOURS_WIDGET_CACHE_KEY = '@moodlet_widget_hours_cache';
 
 const DEFAULT_MOOD_DATA: MoodWidgetData = {
     username: 'there',
@@ -29,6 +47,12 @@ const DEFAULT_MOOD_DATA: MoodWidgetData = {
 
 const DEFAULT_FRIENDS_DATA: FriendsWidgetData = {
     friends: [],
+};
+
+const DEFAULT_HOURS_DATA: HourWidgetProps = {
+    hours: Array.from({ length: 24 }, () => null),
+    avgMoodId: null,
+    avgEmoji: null,
 };
 
 // The widget task handler runs headless, outside the app's provider tree, so
@@ -60,3 +84,53 @@ export const readFriendsWidgetData = async (): Promise<FriendsWidgetData> => {
         return DEFAULT_FRIENDS_DATA;
     }
 };
+
+export const writeHoursWidgetData = (data: HourWidgetProps) =>
+    AsyncStorage.setItem(HOURS_WIDGET_CACHE_KEY, JSON.stringify(data));
+
+export const readHoursWidgetData = async (): Promise<HourWidgetProps> => {
+    const raw = await AsyncStorage.getItem(HOURS_WIDGET_CACHE_KEY);
+    if (!raw) return DEFAULT_HOURS_DATA;
+    try {
+        return { ...DEFAULT_HOURS_DATA, ...JSON.parse(raw) };
+    } catch {
+        return DEFAULT_HOURS_DATA;
+    }
+};
+
+// Finds the mood whose score is closest to a (possibly fractional) average score.
+const moodForScore = (score: number): MoodId => {
+    let closest = MOODS[0];
+    let bestDelta = Math.abs(closest.score - score);
+    for (const m of MOODS) {
+        const delta = Math.abs(m.score - score);
+        if (delta < bestDelta) {
+            closest = m;
+            bestDelta = delta;
+        }
+    }
+    return closest.id;
+};
+
+// Builds today's hourly-timeline widget props straight from hours-store.ts's
+// local AsyncStorage state (adapted from moodlet's src/widgets/data.ts
+// hourWidgetProps(), which read from its in-memory MoodState instead).
+export async function hourWidgetProps(): Promise<HourWidgetProps> {
+    const hoursState = await loadHours();
+    const map = hoursState[dateKey()] ?? {};
+
+    const hours: HourCell[] = Array.from({ length: 24 }, (_, h) => {
+        const moodId = map[h];
+        if (!moodId) return null;
+        return { moodId, emoji: MOOD_EMOJI[moodId], score: MOOD_MAP[moodId].score };
+    });
+
+    const logged = Object.values(map);
+    let avgMoodId: MoodId | null = null;
+    if (logged.length > 0) {
+        const avgScore = logged.reduce((total, id) => total + MOOD_MAP[id].score, 0) / logged.length;
+        avgMoodId = moodForScore(avgScore);
+    }
+
+    return { hours, avgMoodId, avgEmoji: avgMoodId ? MOOD_EMOJI[avgMoodId] : null };
+}
