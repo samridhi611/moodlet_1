@@ -37,8 +37,10 @@ export function MoodCheckInWidget({ username, streak, todayMood, colors }: MoodC
             style={{
                 height: 'match_parent',
                 width: 'match_parent',
-                backgroundColor: hex(colors.surface),
-                borderRadius: 20,
+                backgroundGradient: loggedMood
+                    ? { from: hex(loggedMood.tintBg), to: hex(colors.surface), orientation: 'TL_BR' }
+                    : { from: hex(colors.primarySoft), to: hex(colors.surface), orientation: 'TL_BR' },
+                borderRadius: 26,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 flexDirection: 'column',
@@ -75,8 +77,8 @@ export function MoodCheckInWidget({ username, streak, todayMood, colors }: MoodC
                     clickAction="OPEN_APP"
                     style={{
                         flexDirection: 'column',
-                        backgroundColor: hex(colors.primarySoft),
-                        borderRadius: 16,
+                        backgroundColor: hex(colors.surface),
+                        borderRadius: 18,
                         paddingHorizontal: 14,
                         paddingVertical: 12,
                         width: 'match_parent',
@@ -90,7 +92,7 @@ export function MoodCheckInWidget({ username, streak, todayMood, colors }: MoodC
                         <TextWidget text={MOOD_EMOJI[todayMood]} style={{ fontSize: 24 }} />
                         <TextWidget
                             text={loggedMood.label}
-                            style={{ fontSize: 17, fontWeight: '800', color: hex(colors.primaryDark), marginLeft: 8 }}
+                            style={{ fontSize: 17, fontWeight: '800', color: hex(loggedMood.tintAccent), marginLeft: 8 }}
                         />
                     </FlexWidget>
                 </FlexWidget>
@@ -112,7 +114,7 @@ export function MoodCheckInWidget({ username, streak, todayMood, colors }: MoodC
                                     style={{
                                         width: 54,
                                         height: 64,
-                                        backgroundColor: hex(colors.primarySoft),
+                                        backgroundColor: hex(mood.tintBg),
                                         borderRadius: 18,
                                         flexDirection: 'column',
                                         alignItems: 'center',
@@ -122,7 +124,7 @@ export function MoodCheckInWidget({ username, streak, todayMood, colors }: MoodC
                                     <TextWidget text={MOOD_EMOJI[id]} style={{ fontSize: 26 }} />
                                     <TextWidget
                                         text={mood.label}
-                                        style={{ fontSize: 9, fontWeight: '600', color: hex(colors.muted), marginTop: 2 }}
+                                        style={{ fontSize: 9, fontWeight: '600', color: hex(mood.tintAccent), marginTop: 2 }}
                                     />
                                 </FlexWidget>
                             );

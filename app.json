@@ -72,6 +72,36 @@
               "targetCellHeight": 2,
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "Streak",
+              "label": "moodlet — Streak",
+              "description": "Your check-in streak at a glance.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "TodayMood",
+              "label": "moodlet — Today",
+              "description": "Today's logged mood at a glance.",
+              "minWidth": "110dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 2,
+              "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "WeekWave",
+              "label": "moodlet — This week",
+              "description": "Your last 7 days, one glance.",
+              "minWidth": "110dp",
+              "minHeight": "180dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 3,
+              "updatePeriodMillis": 1800000
             }
           ]
         }

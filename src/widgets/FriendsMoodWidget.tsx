@@ -20,8 +20,9 @@ const formatAgo = (minutesAgo: number) => {
 
 function Avatar({ friend, colors, size }: { friend: FriendMoodEntry; colors: PaletteColors; size: number }) {
     const initial = friend.name.charAt(0).toUpperCase();
+    const ringColor = MOOD_MAP[friend.mood].tintAccent;
     return (
-        <FlexWidget style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: hex(colors.primary), padding: 2 }}>
+        <FlexWidget style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: hex(ringColor), padding: 2 }}>
             <FlexWidget
                 style={{
                     width: 'match_parent',
@@ -60,6 +61,7 @@ export type FriendsMoodWidgetProps = FriendsWidgetData & { colors: PaletteColors
 export function FriendsMoodWidget({ friends, colors, tall = false }: FriendsMoodWidgetProps) {
     const vibing = friends.filter((f) => MOOD_MAP[f.mood].score >= VIBING_THRESHOLD).length;
     const shown = friends.slice(0, 4);
+    const topMood = shown.length > 0 ? MOOD_MAP[shown[0].mood] : null;
 
     return (
         <FlexWidget
@@ -67,8 +69,10 @@ export function FriendsMoodWidget({ friends, colors, tall = false }: FriendsMood
             style={{
                 height: 'match_parent',
                 width: 'match_parent',
-                backgroundColor: hex(colors.surface),
-                borderRadius: 20,
+                backgroundGradient: topMood
+                    ? { from: hex(topMood.tintBg), to: hex(colors.surface), orientation: 'TL_BR' }
+                    : { from: hex(colors.primarySoft), to: hex(colors.surface), orientation: 'TL_BR' },
+                borderRadius: 26,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 flexDirection: 'column',

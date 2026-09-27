@@ -1,7 +1,7 @@
 "use no memo";
 
 import { PaletteColors } from '@/theme/design';
-import { MOOD_INFO as MOODS } from '@/theme/mood-data';
+import { MOOD_INFO as MOODS, MOOD_INFO_MAP as MOOD_MAP } from '@/theme/mood-data';
 import { FlexWidget, TextWidget } from 'react-native-android-widget';
 import { hex } from './hex';
 import { MOOD_EMOJI } from './mood-emoji';
@@ -17,9 +17,11 @@ export type HourlyMoodWidgetProps = HourWidgetProps & { colors: PaletteColors; t
 // process — hours-store.ts is local AsyncStorage state end to end.
 export function HourlyMoodWidget({ hours, avgMoodId, avgEmoji, colors, tall = false }: HourlyMoodWidgetProps) {
     const nowHour = new Date().getHours();
+    const avgMood = avgMoodId ? MOOD_MAP[avgMoodId] : null;
     const barHeight = (score: number) => (tall ? 18 + score * 8 : 8 + score * 4);
     const barColor = (h: number) => {
-        if (hours[h]) return hex(colors.primary);
+        const cell = hours[h];
+        if (cell) return hex(MOOD_MAP[cell.moodId].tintAccent);
         if (h === nowHour) return hex(colors.accent);
         return hex(h > nowHour ? colors.border : colors.borderStrong);
     };
@@ -30,8 +32,10 @@ export function HourlyMoodWidget({ hours, avgMoodId, avgEmoji, colors, tall = fa
             style={{
                 height: 'match_parent',
                 width: 'match_parent',
-                backgroundColor: hex(colors.surface),
-                borderRadius: 20,
+                backgroundGradient: avgMood
+                    ? { from: hex(avgMood.tintBg), to: hex(colors.surface), orientation: 'TL_BR' }
+                    : { from: hex(colors.primarySoft), to: hex(colors.surface), orientation: 'TL_BR' },
+                borderRadius: 26,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 flexDirection: 'column',
@@ -53,16 +57,16 @@ export function HourlyMoodWidget({ hours, avgMoodId, avgEmoji, colors, tall = fa
                     />
                     <TextWidget text="Mood timeline" style={{ fontSize: 15, fontWeight: '800', color: hex(colors.ink) }} />
                 </FlexWidget>
-                {avgEmoji && (
+                {avgEmoji && avgMood && (
                     <FlexWidget
                         style={{
-                            backgroundColor: hex(colors.primarySoft),
+                            backgroundColor: hex(colors.surface),
                             borderRadius: 999,
                             paddingHorizontal: 10,
                             paddingVertical: 4,
                         }}
                     >
-                        <TextWidget text={`avg ${avgEmoji}`} style={{ fontSize: 11, fontWeight: '700', color: hex(colors.primaryDark) }} />
+                        <TextWidget text={`avg ${avgEmoji}`} style={{ fontSize: 11, fontWeight: '700', color: hex(avgMood.tintAccent) }} />
                     </FlexWidget>
                 )}
             </FlexWidget>
@@ -99,7 +103,7 @@ export function HourlyMoodWidget({ hours, avgMoodId, avgEmoji, colors, tall = fa
                                     marginLeft: 4,
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    backgroundColor: active ? hex(colors.primarySoft) : hex(colors.blush),
+                                    backgroundColor: active ? hex(mood.tintBg) : hex(colors.blush),
                                 }}
                             >
                                 <TextWidget text={MOOD_EMOJI[mood.id]} style={{ fontSize: tall ? 17 : 13 }} />

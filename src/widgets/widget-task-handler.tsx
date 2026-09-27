@@ -5,11 +5,15 @@ import { HourlyMoodWidget } from './HourlyMoodWidget';
 import { applyHour, loadHours, saveHours } from './hours-store';
 import { MoodCheckInWidget } from './MoodCheckInWidget';
 import { getWidgetColors } from './palette-for-widgets';
+import { StreakWidget } from './StreakWidget';
+import { TodayMoodWidget } from './TodayMoodWidget';
+import { WeekWaveWidget } from './WeekWaveWidget';
 import {
     hourWidgetProps,
     readFriendsWidgetData,
     readHoursWidgetData,
     readMoodWidgetData,
+    readWeekWidgetData,
     writeHoursWidgetData,
 } from './widget-data';
 
@@ -59,6 +63,15 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
             } else if (widgetInfo.widgetName === 'HourlyMood') {
                 const data = await readHoursWidgetData();
                 renderWidget(<HourlyMoodWidget {...data} colors={colors} tall={widgetInfo.height > 250} />);
+            } else if (widgetInfo.widgetName === 'Streak') {
+                const data = await readMoodWidgetData();
+                renderWidget(<StreakWidget streak={data.streak} colors={colors} />);
+            } else if (widgetInfo.widgetName === 'TodayMood') {
+                const data = await readMoodWidgetData();
+                renderWidget(<TodayMoodWidget todayMood={data.todayMood} colors={colors} />);
+            } else if (widgetInfo.widgetName === 'WeekWave') {
+                const data = await readWeekWidgetData();
+                renderWidget(<WeekWaveWidget {...data} colors={colors} />);
             }
             break;
         }

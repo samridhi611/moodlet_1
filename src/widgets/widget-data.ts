@@ -35,9 +35,20 @@ export type HourWidgetProps = {
     avgEmoji: string | null;
 };
 
+// One entry per day for the last 7 calendar days, oldest first, today last —
+// for the WeekWave native widget (2x3). Computed in-app from useEntries()
+// (see src/widgets/WidgetSync.tsx) since a headless widget process can't
+// read Supabase-backed entries itself.
+export type WeekDayCell = { label: string; moodId: MoodId | null; today: boolean };
+
+export type WeekWidgetData = {
+    days: WeekDayCell[]; // 7 entries
+};
+
 const MOOD_WIDGET_CACHE_KEY = '@moodlet_widget_mood_cache';
 const FRIENDS_WIDGET_CACHE_KEY = '@moodlet_widget_friends_cache';
 const HOURS_WIDGET_CACHE_KEY = '@moodlet_widget_hours_cache';
+const WEEK_WIDGET_CACHE_KEY = '@moodlet_widget_week_cache';
 
 const DEFAULT_MOOD_DATA: MoodWidgetData = {
     username: 'there',
@@ -53,6 +64,10 @@ const DEFAULT_HOURS_DATA: HourWidgetProps = {
     hours: Array.from({ length: 24 }, () => null),
     avgMoodId: null,
     avgEmoji: null,
+};
+
+const DEFAULT_WEEK_DATA: WeekWidgetData = {
+    days: Array.from({ length: 7 }, () => ({ label: '', moodId: null, today: false })),
 };
 
 // The widget task handler runs headless, outside the app's provider tree, so
@@ -95,6 +110,19 @@ export const readHoursWidgetData = async (): Promise<HourWidgetProps> => {
         return { ...DEFAULT_HOURS_DATA, ...JSON.parse(raw) };
     } catch {
         return DEFAULT_HOURS_DATA;
+    }
+};
+
+export const writeWeekWidgetData = (data: WeekWidgetData) =>
+    AsyncStorage.setItem(WEEK_WIDGET_CACHE_KEY, JSON.stringify(data));
+
+export const readWeekWidgetData = async (): Promise<WeekWidgetData> => {
+    const raw = await AsyncStorage.getItem(WEEK_WIDGET_CACHE_KEY);
+    if (!raw) return DEFAULT_WEEK_DATA;
+    try {
+        return { ...DEFAULT_WEEK_DATA, ...JSON.parse(raw) };
+    } catch {
+        return DEFAULT_WEEK_DATA;
     }
 };
 
