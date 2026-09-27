@@ -32,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./src/assets/images/logo.png",
+          "image": "./src/assets/images/ios-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#F7F1E8"
@@ -76,7 +76,9 @@
           ]
         }
       ],
-      "./plugins/withAndroidWorkManagerFix"
+      "./plugins/withAndroidWorkManagerFix",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

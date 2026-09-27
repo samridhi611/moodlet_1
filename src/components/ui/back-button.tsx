@@ -16,9 +16,7 @@ export function BackButton({ onPress, label = 'Back' }: Props) {
     return (
         <Pressable
             onPress={onPress}
-            style={() => [
-                styles.button,
-            ]}
+            style={styles.button}
             accessibilityRole="button"
             accessibilityLabel={label}
         >
