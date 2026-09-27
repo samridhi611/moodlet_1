@@ -6,6 +6,7 @@ import { StreakWidget, TodayWidget, WeekWidget } from '@/components/widgets/Mini
 import { useCheckInSheet } from '@/context/CheckInSheetContext';
 import { useEntries } from '@/context/EntriesContext';
 import { usePalette } from '@/context/PaletteContext';
+import { usePressState } from '@/hooks/use-press-state';
 import { useProfile } from '@/context/ProfileContext';
 import { fontFamily, PaletteColors } from '@/theme/design';
 import { Flame } from 'lucide-react-native';
@@ -25,6 +26,8 @@ export default function HomeScreen() {
   const { colors } = usePalette();
   const { entries, todayEntry, streak, isLoading, refresh } = useEntries();
   const { open: openCheckIn } = useCheckInSheet();
+  const logAnother = usePressState();
+  const beginCheckIn = usePressState();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const recentEntries = todayEntry ? entries.slice(1, 11) : entries.slice(0, 10);
@@ -74,7 +77,8 @@ export default function HomeScreen() {
             <EntryCard entry={todayEntry} />
             <Pressable
               onPress={openCheckIn}
-              style={({ pressed }) => [styles.secondaryButton, pressed && styles.lightPress]}
+              {...logAnother.handlers}
+              style={[styles.secondaryButton, logAnother.pressed && styles.lightPress]}
             >
               <Text style={styles.secondaryButtonText}>Log another moment</Text>
             </Pressable>
@@ -88,7 +92,8 @@ export default function HomeScreen() {
             </Text>
             <Pressable
               onPress={openCheckIn}
-              style={({ pressed }) => [styles.entryButton, pressed && styles.entryButtonPressed]}
+              {...beginCheckIn.handlers}
+              style={[styles.entryButton, beginCheckIn.pressed && styles.entryButtonPressed]}
             >
               <Text style={styles.entryButtonText}>Begin check-in</Text>
             </Pressable>

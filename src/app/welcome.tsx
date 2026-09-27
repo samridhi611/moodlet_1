@@ -1,18 +1,17 @@
-import { PrimaryButton } from '@/components/ui/primary-button';
-import { useAuth } from '@/context/AuthContext';
-import { usePalette } from '@/context/PaletteContext';
-import { Image } from 'expo-image';
-import { Redirect } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { PrimaryButton } from "@/components/ui/primary-button";
+import { useAuth } from "@/context/AuthContext";
+import { usePalette } from "@/context/PaletteContext";
+import { Image } from "expo-image";
+import { Redirect } from "expo-router";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function WelcomeScreen() {
   const { isSignedIn, signInWithGoogle } = useAuth();
-  const { colors, styles: s } = usePalette();      // ← shared design system
+  const { colors, styles: s } = usePalette(); // ← shared design system
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
 
   if (isSignedIn) return <Redirect href="/(tabs)" />;
 
@@ -22,7 +21,7 @@ export default function WelcomeScreen() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setIsSigningIn(false);
     }
@@ -30,12 +29,13 @@ export default function WelcomeScreen() {
 
   return (
     // background is the one color value not in shared styles — inline is fine here
-    <SafeAreaView style={[s.layout.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[s.layout.safeArea, { backgroundColor: colors.background }]}
+    >
       <View style={screen.container}>
-
         <View style={screen.topBar}>
           <Image
-            source={require('@/assets/images/moodlet_logo.svg')}
+            source={require("@/assets/images/moodlet_logo.svg")}
             style={screen.logo}
             contentFit="contain"
           />
@@ -47,8 +47,8 @@ export default function WelcomeScreen() {
             feel it. name it. let it pass.
           </Text>
           <Text style={[s.type.subtitle, screen.heroSubtitle]}>
-            A tiny mood journal for quick check-ins, late-night thoughts, and the days
-            you do not want to explain.
+            A tiny mood journal for quick check-ins, late-night thoughts, and
+            the days you do not want to explain.
           </Text>
         </View>
 
@@ -57,12 +57,12 @@ export default function WelcomeScreen() {
 
           <PrimaryButton
             label="Sign in with Google"
+            // icon={<GoogleMark size={20} />}
             onPress={handleGoogleSignIn}
             disabled={isSigningIn}
             loading={isSigningIn}
           />
         </View>
-
       </View>
     </SafeAreaView>
   );
@@ -72,13 +72,13 @@ export default function WelcomeScreen() {
 const screen = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingVertical: 24,
   },
   topBar: {
-    alignItems: 'center',
-    flexDirection: 'row',
+    alignItems: "center",
+    flexDirection: "row",
   },
   logo: {
     height: 50,
@@ -87,13 +87,14 @@ const screen = StyleSheet.create({
   },
   hero: {
     gap: 16,
+    marginTop: -50,
   },
   // Overrides on top of s.type.screenTitle
   heroTitle: {
     fontSize: 56,
     lineHeight: 58,
     maxWidth: 370,
-    textTransform: 'lowercase',
+    textTransform: "lowercase",
   },
   // Overrides on top of s.type.subtitle
   heroSubtitle: {

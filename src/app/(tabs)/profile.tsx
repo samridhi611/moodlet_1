@@ -1,6 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { usePalette } from '@/context/PaletteContext';
 import { useProfile } from '@/context/ProfileContext';
+import { usePressState } from '@/hooks/use-press-state';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
 import { fontFamily, PaletteColors } from '@/theme/design';
 import { PALETTES, PaletteId, PaletteTokens } from '@/theme/theme';
@@ -156,6 +157,7 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
   const { paletteId, colors, setPalette } = usePalette();
   const reduceMotion = useReduceMotion();
+  const signOutPress = usePressState();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const fadeOpacity = useSharedValue(1);
@@ -211,10 +213,17 @@ export default function ProfileScreen() {
 
         <Pressable
           onPress={signOut}
-          style={({ pressed }) => [styles.signOutButton, pressed && styles.lightPress]}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
+          {...signOutPress.handlers}
+          style={[
+            styles.card,
+            styles.signOutButton,
+            (signOutPress.hovered || signOutPress.pressed) && styles.signOutActive,
+          ]}
         >
-          <View style={[styles.sectionIcon, { backgroundColor: colors.errorSoft }]}>
-            <LogOut size={15} color={colors.error} strokeWidth={2.2} />
+          <View style={[styles.sectionIcon, { backgroundColor: colors.primarySoft }]}>
+            <LogOut size={15} color={colors.accentText} strokeWidth={2.2} />
           </View>
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
@@ -291,24 +300,24 @@ const createStyles = (colors: PaletteColors) =>
       gap: '3.5%',
       rowGap: 16,
     },
+    // Same card chrome *and* the same accent-tinted icon chip as the Palette
+    // section — this is a sibling card, not a pill. Deliberately palette-derived
+    // rather than the fixed `colors.error` red: that red never moves when you
+    // switch palettes, so it was the one thing on this screen that ignored the
+    // theme. `colors.error` stays reserved for validation and destructive
+    // deletes, where the warning has to read the same in every palette.
     signOutButton: {
       alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderColor: colors.border,
-      borderRadius: 18,
-      borderWidth: StyleSheet.hairlineWidth,
       flexDirection: 'row',
-      gap: 10,
-      justifyContent: 'center',
-      minHeight: 58,
-      paddingHorizontal: 18,
+      gap: 12,
+      paddingVertical: 16,
     },
-    lightPress: {
-      opacity: 0.72,
+    signOutActive: {
+      backgroundColor: colors.blush,
     },
     signOutText: {
       color: colors.ink,
       fontFamily: fontFamily.bold,
-      fontSize: 15,
+      fontSize: 16,
     },
   });
